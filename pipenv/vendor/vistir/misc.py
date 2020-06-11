@@ -11,12 +11,14 @@ import os
 import subprocess
 import sys
 import threading
+
 from collections import OrderedDict
 from functools import partial
 from itertools import islice, tee
 from weakref import WeakKeyDictionary
 
 import six
+
 from six.moves.queue import Empty, Queue
 
 from .cmdparse import Script
@@ -35,6 +37,7 @@ from .compat import (
 from .contextmanagers import spinner as spinner
 from .environment import MYPY_RUNNING
 from .termcolors import ANSI_REMOVAL_RE, colorize
+
 
 if os.name != "nt":
 
@@ -170,7 +173,21 @@ def _spawn_subprocess(
         "shell": False,
     }
     if sys.version_info[:2] > (3, 5):
-        options.update({"universal_newlines": True, "encoding": "utf-8"})
+        # 2020-06-12 Yukihiko Shinoda
+        # There are 3 way to get system default encoding in Stack Overflow.
+        # see: https://stackoverflow.com/questions/37506535/how-to-get-the-system-default-encoding-in-python-2-x
+        # I investigated these way by using Shift-JIS Windows.
+        # >>> import locale
+        # >>> locale.getpreferredencoding()
+        # "cp932" (Shift-JIS)
+        # >>> import sys
+        # >>> sys.getdefaultencoding()
+        # "utf-8"
+        # >>> sys.stdout.encoding
+        # "UTF8"
+        options.update(
+            {"universal_newlines": True, "encoding": locale.getpreferredencoding()}
+        )
     elif os.name != "nt":
         options["universal_newlines"] = True
     if not block:
