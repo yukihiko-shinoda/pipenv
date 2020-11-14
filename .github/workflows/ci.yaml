@@ -17,6 +17,7 @@ on:
     - '.editorconfig'
     branches:
     - master
+    - reproduce-remove-file-windows
   pull_request:
     paths-ignore:
     - 'docs/**'
@@ -44,7 +45,26 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-
+    - name: Check Language list
+      run: .\ChangeSystemDisplayLanguage.ps1 -AvailableLanguage
+      if: matrix.os == 'Windows'
+    - name: Install Language pack
+      run: .\DownloadAndInstallLanguagePack.ps1
+      if: matrix.os == 'Windows'
+    - name: Check Language list
+      run: .\ChangeSystemDisplayLanguage.ps1 -AvailableLanguage
+      if: matrix.os == 'Windows'
+    - name: Set Language
+      run: .\ChangeSystemDisplayLanguage.ps1 -SetLanguage ja-JP
+      if: matrix.os == 'Windows'
+    - name: Check Language list
+      run: .\ChangeSystemDisplayLanguage.ps1 -AvailableLanguage
+      if: matrix.os == 'Windows'
+    - run: '[Console]::Out'
+      if: matrix.os == 'Windows'
+    - run: |
+        [Console]::OutputEncoding = [System.Text.Encoding]::GetEncoding("Shift_JIS"); [Console]::Out
+      if: matrix.os == 'Windows'
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
@@ -81,4 +101,18 @@ jobs:
         PYTHONIOENCODING: 'utf-8'
         GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=accept-new -o CheckHostIP=no
       run: |
-        pipenv run pytest -ra -n 4 tests
+        [Console]::OutputEncoding = [System.Text.Encoding]::GetEncoding("Shift_JIS"); pipenv run pytest -ra -n 4 tests/unit/vendor/vistir/test_path.py
+      if: matrix.os == 'Windows'
+    - name: Run tests
+      env:
+        PIPENV_DEFAULT_PYTHON_VERSION: ${{ matrix.python-version }}
+        PYTHONWARNINGS: ignore:DEPRECATION
+        PIPENV_NOSPIN: '1'
+        CI: '1'
+        GIT_ASK_YESNO: 'false'
+        PYPI_VENDOR_DIR: './tests/pypi/'
+        PYTHONIOENCODING: 'utf-8'
+        GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=accept-new -o CheckHostIP=no
+      run: |
+        pipenv run pytest -ra -n 4 tests/unit/vendor/vistir/test_path.py
+      if: matrix.os != 'Windows'
